@@ -5,76 +5,90 @@ import json
 from datetime import datetime
 import os
 
-#cria ou atualiza o documento de metadados com os nomes dos produtos sendo observados passados atravez da lista
+# Cria ou atualiza o documento de metadados com os nomes dos produtos sendo observados passados atravez da lista
 def metadados(lista):
     meta_json = {}
-    if os.path.exists("metadados.dat"):#verifica se existe o arquivo
-        #se existir
-        with open("metadados.dat","r") as myfile:#abre o arquivo
-            meta_json = json.load(myfile)#carrega as informações do arquivo
+    # Verifica se existe o arquivo
+    if os.path.exists("metadados.dat"):
+        # Se existir, abre e carrega as informações
+        with open("metadados.dat","r") as myfile:
+            meta_json = json.load(myfile)
     else:
-        #caso não exista
-        #cria um modelo vazio da estrutura do arquivo(em json)
+        # Caso não exista, cria um modelo vazio da estrutura do arquivo (em json)
         meta_json = {
             'nomes': [],
         }
 
-    #agora com as informações carregadas(seja vazio ou com os dados do arquivo)
-    for produto in lista:#para todos os produtos passados na lista de produtos
-        s = produto["nome"]#pega o nome do produto atual
-        name = "".join(x for x in s if x.isalnum())#formata ele para um nome compativel com a formatação para arquivos
-        if not(name in meta_json['nomes']):#se o nome já não estiver presente na lista
-            meta_json['nomes'].append(name)#adiciona o nome a lista
+    # Agora com as informações carregadas(seja vazio ou com os dados do arquivo)
+    # Para todos os produtos passados na lista de produtos
+    for produto in lista:
+        s = produto["nome"]
+        # Formata ele para um nome compativel com a formatação para arquivos
+        name = "".join(x for x in s if x.isalnum())
+        # Se o nome já não estiver presente na lista, adiciona o nome a lista
+        if not(name in meta_json['nomes']):
+            meta_json['nomes'].append(name)
 
-    with open("metadados.dat","w+") as myfile:#abre o arquivo novamente, agora com a garantia da existencia ou criando se necessário
-        json.dump(meta_json,myfile)#insere as informações (atualizadas ou geradas agora)
+    # Abre o arquivo novamente, agora com a garantia da existencia ou criando se
+    # necessário,  e insere as informações (atualizadas ou geradas agora)
+    with open("metadados.dat","w+") as myfile:
+        json.dump(meta_json,myfile)
 
 
-#recebe os dados de um produto especifico e armazena eles no arquivo dele existente ou gera o arquivo para iniciar o armazenamento
+# Recebe os dados de um produto especifico e armazena eles no arquivo dele 
+# existente ou gera o arquivo para iniciar o armazenamento
 def storeData(produto):
-    prod_json = {}#cria o formato vazio do produto
-    s = produto["nome"]#recebe o nome do produto
-    path = "".join(x for x in s if x.isalnum())#formata o nome para a formatação de nome de arquivo
-    date = datetime.today().strftime('%Y-%m-%d')#recebe a data atual do momento da medição de preço
-    price =  produto["preco"]#recebe o preço atual
-    #print(path)
+    prod_json = {}
+    s = produto["nome"]
+    # Formata o nome para a formatação de nome de arquivo
+    path = "".join(x for x in s if x.isalnum())
+    # Recebe a data atual do momento da medição de preço
+    date = datetime.today().strftime('%Y-%m-%d')
+    price =  produto["preco"]
     
-    
-    if os.path.exists("produtos\\"+path):#caso o arquivo já exista
-        with open("produtos\\"+path,"r") as myfile:#abre o arquivo do produto
-            prod_json = json.load(myfile)#carrega as informações passadas
-            
-    else:#caso contrário
-        prod_json = {#cria o produto com apenas as informações atuais
-            'nome': s,#nome base
-            'safe_file_name':path,#nome editado para arquivo
-            'preco_data': [],#vetor com duplas de preço e data
-            'tracking': False#bandeira de caso tenha interesse em exibir em grafico
+    # Caso o arquivo já exista, abre e carrega as informações passadas
+    if os.path.exists("produtos\\"+path):
+        with open("produtos\\"+path,"r") as myfile:
+            prod_json = json.load(myfile)
+    # Se não existir, cria o produto com apenas as informações atuais
+    else:
+        prod_json = {
+            'nome': s,
+            'safe_file_name':path,
+            'preco_data': [],
+            'tracking': False # flag para caso tenha interesse em exibir em grafico
             }
 
-    temp_arr = [price,date]#recebe o proeço e a data da medição atual
-    prod_json['preco_data'].append(temp_arr)#adiciona as informações antigas(caso tenha)
+    # Recebe o preço e a data da medição atual e adiciona as informações antigas, caso tenha
+    temp_arr = [price,date]
+    prod_json['preco_data'].append(temp_arr)
 
-    with open("produtos\\"+path,"w+") as myfile:#abre ou cria o arquivo
-            json.dump(prod_json,myfile)#insere as informações atualizadas
+    with open("produtos\\"+path,"w+") as myfile:
+            json.dump(prod_json,myfile)
 
 
 
-#tendo um url(link) de uma pagina de *´PESQUISA DE PRODUTO* da Kabum, recebe as informações de todos os resultados da pesquisa
+# Tendo um url de uma pagina de *´PESQUISA DE PRODUTO* da Kabum, recebe as
+# informações de todos os resultados da pesquisa
 def getInfoFromKabum(url):
-    req = requests.get(url)  #faz a requisição(ou seja, acessa) do site
+    # Faz a requisição do site
+    req = requests.get(url)
 
-    if req.status_code == 200: #caso consiga acessar o site
+    if req.status_code == 200:
         print('Requisição bem sucedida!')
-        conteudo = req.content#atribui o html a uma variável
+        conteudo = req.content
 
-    soup = BeautifulSoup(conteudo, 'html.parser') #informa o html para o interpretador
+    # Informa o html para o interpretador
+    soup = BeautifulSoup(conteudo, 'html.parser')
 
-    scripts = soup.find_all(type="text/javascript") #procura no html a tag=script
+    # Procura no html a tag=script
+    scripts = soup.find_all(type="text/javascript")
 
-    data = re.findall(r'\bconst\s+listagemDados\s*=\s*(\[[^\]]*\])', scripts[9].string, re.DOTALL) #procura em todas as todos os scripts a string "listagemDados"
+    # Procura em todas as todos os scripts a string "listagemDados"
+    data = re.findall(r'\bconst\s+listagemDados\s*=\s*(\[[^\]]*\])', scripts[9].string, re.DOTALL)
 
-    lista = json.loads(data[0]) #carrega o json da variável
+    # Carrega o json da variável
+    lista = json.loads(data[0])
     print("inserindo no arquivo metadados a lista de produtos")
     metadados(lista)
     print("armazenando as informações dos produtos")
